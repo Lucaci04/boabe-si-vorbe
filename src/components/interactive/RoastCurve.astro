@@ -1,0 +1,311 @@
+---
+import { BT_MAX, BT_MIN, ROAST_END, events, formatTime, phases, samples } from '../../data/roast';
+
+const W = 1000;
+const H = 300;
+const ROR_MAX = 25;
+const x = (t: number) => (t / ROAST_END) * W;
+const yBt = (bt: number) => (1 - (bt - BT_MIN) / (BT_MAX - BT_MIN)) * H;
+const yRor = (ror: number) => (1 - ror / ROR_MAX) * H;
+
+const btPoints = samples.map((s) => `${x(s.t).toFixed(1)},${yBt(s.bt).toFixed(1)}`).join(' ');
+const rorPoints = samples
+  .filter((s) => s.ror !== null)
+  .map((s) => `${x(s.t).toFixed(1)},${yRor(s.ror!).toFixed(1)}`)
+  .join(' ');
+
+const pct = (v: number, max: number) => `${((v / max) * 100).toFixed(2)}%`;
+const btAt = (t: number) => samples.find((s) => s.t === t)?.bt ?? samples[samples.length - 1].bt;
+const minutes = Array.from({ length: Math.floor(ROAST_END / 60) + 1 }, (_, i) => i * 60);
+const last = samples[samples.length - 1];
+---
+
+<figure class="roast" data-roast data-samples={JSON.stringify(samples)} data-phases={JSON.stringify(phases)}>
+  <!-- Fazele prăjirii, proporționale cu durata -->
+  <ol class="grid border-b border-ink font-data text-sm" style={`grid-template-columns:${phases.map((p) => `${p.to - p.from}fr`).join(' ')}`} aria-label="Fazele prăjirii">
+    {phases.map((p, i) => (
+      <li class:list={['flex items-baseline justify-between gap-2 px-3 py-1.5', i > 0 && 'border-l border-ink']}>
+        <span class="truncate font-semibold tracking-[0.04em] uppercase"><span class="sm:hidden">{p.name.length > 8 ? `${p.name.slice(0, 4)}.` : p.name}</span><span class="hidden sm:inline">{p.name}</span></span>
+        <span class="hidden tabular-nums text-ink-soft sm:inline">{formatTime(p.from)}–{formatTime(p.to)}</span>
+      </li>
+    ))}
+  </ol>
+
+  <div
+    class="chart relative"
+    tabindex="0"
+    role="slider"
+    aria-label="Curba de prăjire a lotului: mută cu săgețile stânga și dreapta"
+    aria-valuemin="0"
+    aria-valuemax={ROAST_END}
+    aria-valuenow={last.t}
+    aria-valuetext={`${formatTime(last.t)}, ${last.bt} grade, scoatere`}
+    data-chart
+  >
+    <!-- Grilă de temperatură -->
+    {[100, 150, 200].map((bt) => (
+      <div class="grid-line" style={`top:${((yBt(bt) / H) * 100).toFixed(2)}%`} aria-hidden="true">
+        <span>{bt}°</span>
+      </div>
+    ))}
+
+    <svg class="curves" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+      <polyline class="ror" points={rorPoints} />
+      <polyline class="bt" points={btPoints} />
+    </svg>
+
+    {events.map((e) => (
+      <div
+        class="event"
+        data-align={e.t === 0 ? 'start' : e.t === ROAST_END ? 'end' : 'center'}
+        data-minor={e.label === 'Sfârșitul uscării' ? '' : undefined}
+        data-low={e.label === 'Punct de întoarcere' ? '' : undefined}
+        style={`left:${pct(e.t, ROAST_END)};top:${((yBt(btAt(e.t)) / H) * 100).toFixed(2)}%`}
+        aria-hidden="true"
+      >
+        <span class="event-dot"></span>
+        <span class="event-label">{e.label} <b>{formatTime(e.t)}</b></span>
+      </div>
+    ))}
+
+    <div class="cursor" data-cursor aria-hidden="true"></div>
+  </div>
+
+  <div class="flex justify-between border-t border-ink px-3 py-1 font-data text-xs text-ink-soft tabular-nums" aria-hidden="true">
+    {minutes.map((m) => <span>{m / 60}′</span>)}
+  </div>
+
+  <ul class="event-key flex-wrap gap-x-4 gap-y-1 border-t border-ink px-3 py-2 font-data text-sm" aria-hidden="true">
+    {events.map((e) => <li>{e.label} <b class="font-semibold tabular-nums">{formatTime(e.t)}</b></li>)}
+  </ul>
+
+  <!-- Citire în celule fixe: structura nu se mișcă, doar valorile -->
+  <figcaption class="grid grid-cols-2 gap-px border-t border-ink bg-ink sm:grid-cols-4">
+    <div class="cell bg-kraft">
+      <span class="field-label">Timp</span>
+      <span class="field-value" data-read="t">{formatTime(last.t)}</span>
+    </div>
+    <div class="cell bg-kraft">
+      <span class="field-label flex items-center gap-1.5"><span class="swatch bg-roast"></span>Temp. boabe</span>
+      <span class="field-value" data-read="bt">{last.bt} °C</span>
+    </div>
+    <div class="cell bg-kraft">
+      <span class="field-label flex items-center gap-1.5"><span class="swatch bg-ror"></span>Rată de creștere</span>
+      <span class="field-value" data-read="ror">{last.ror} °C/min</span>
+    </div>
+    <div class="cell bg-kraft">
+      <span class="field-label">Fază</span>
+      <span class="field-value" data-read="phase">Scoatere</span>
+    </div>
+  </figcaption>
+</figure>
+
+<script>
+  import { formatTime, ROAST_END, type RoastPhase, type RoastSample } from '../../data/roast';
+
+  document.querySelectorAll<HTMLElement>('[data-roast]').forEach((root) => {
+    const samples: RoastSample[] = JSON.parse(root.dataset.samples!);
+    const phases: RoastPhase[] = JSON.parse(root.dataset.phases!);
+    const chart = root.querySelector<HTMLElement>('[data-chart]')!;
+    const cursor = root.querySelector<HTMLElement>('[data-cursor]')!;
+    const read = (k: string) => root.querySelector<HTMLElement>(`[data-read="${k}"]`)!;
+    let index = samples.length - 1;
+
+    const phaseOf = (s: RoastSample) =>
+      s.t === ROAST_END ? 'Scoatere' : (phases.find((p) => s.t >= p.from && s.t < p.to)?.name ?? '');
+
+    function show(i: number, moveCursor = true) {
+      index = Math.max(0, Math.min(samples.length - 1, i));
+      const s = samples[index];
+      read('t').textContent = formatTime(s.t);
+      read('bt').textContent = `${s.bt} °C`;
+      read('ror').textContent = s.ror === null ? '—' : `${s.ror} °C/min`;
+      read('phase').textContent = phaseOf(s);
+      chart.setAttribute('aria-valuenow', String(s.t));
+      chart.setAttribute('aria-valuetext', `${formatTime(s.t)}, ${s.bt} grade, ${phaseOf(s).toLowerCase()}`);
+      if (moveCursor) {
+        cursor.style.left = `${(s.t / ROAST_END) * 100}%`;
+        cursor.classList.add('is-on');
+      }
+    }
+
+    const nearest = (clientX: number) => {
+      const r = chart.getBoundingClientRect();
+      const t = ((clientX - r.left) / r.width) * ROAST_END;
+      let best = 0;
+      samples.forEach((s, i) => {
+        if (Math.abs(s.t - t) < Math.abs(samples[best].t - t)) best = i;
+      });
+      return best;
+    };
+
+    chart.addEventListener('pointermove', (e) => show(nearest(e.clientX)));
+    chart.addEventListener('pointerdown', (e) => show(nearest(e.clientX)));
+    chart.addEventListener('pointerleave', () => {
+      cursor.classList.remove('is-on');
+      show(samples.length - 1, false);
+    });
+    chart.addEventListener('keydown', (e) => {
+      const step = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[e.key];
+      if (step) {
+        e.preventDefault();
+        show(index + step);
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        show(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        show(samples.length - 1);
+      }
+    });
+    chart.addEventListener('blur', () => cursor.classList.remove('is-on'));
+  });
+</script>
+
+<style>
+  .chart {
+    height: clamp(170px, 21vh, 220px);
+    margin-left: 2.5rem;
+    margin-right: 1rem;
+    touch-action: pan-y;
+    cursor: crosshair;
+  }
+  .chart:focus-visible {
+    outline-offset: 6px;
+  }
+  .grid-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-top: var(--rule-soft);
+  }
+  .grid-line span {
+    position: absolute;
+    left: -2.5rem;
+    top: -0.55rem;
+    width: 2rem;
+    text-align: right;
+    font-family: var(--font-data);
+    font-size: 0.75rem;
+    color: var(--color-ink-soft);
+  }
+  .curves {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    animation: draw 2.4s var(--ease-out) 0.2s both;
+  }
+  .curves polyline {
+    fill: none;
+    vector-effect: non-scaling-stroke;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+  .bt {
+    stroke: var(--color-roast);
+    stroke-width: 3;
+  }
+  .ror {
+    stroke: var(--color-ror);
+    stroke-width: 2;
+    stroke-dasharray: 6 5;
+  }
+  .event {
+    position: absolute;
+    width: 0;
+    height: 0;
+    animation: appear 0.5s var(--ease-out) 1.8s both;
+  }
+  .event-dot {
+    position: absolute;
+    left: -5px;
+    top: -5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--color-kraft);
+    border: 2px solid var(--color-ink);
+  }
+  .event-label {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-family: var(--font-data);
+    font-size: 0.875rem;
+    font-weight: 500;
+    background: var(--color-kraft);
+    padding: 0 0.25rem;
+  }
+  .event-label b {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .event[data-align='start'] .event-label {
+    transform: none;
+    left: 8px;
+    bottom: -6px;
+  }
+  .event[data-align='end'] .event-label {
+    transform: translateX(-100%);
+    left: -10px;
+    bottom: auto;
+    top: 8px;
+  }
+  .event[data-minor] .event-label {
+    bottom: 26px;
+  }
+  .event[data-low] .event-label {
+    transform: translateX(-100%);
+    left: -16px;
+    bottom: -9px;
+  }
+  .cursor {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-left: 1px solid var(--color-ink);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .cursor.is-on {
+    opacity: 1;
+  }
+  .swatch {
+    display: inline-block;
+    width: 0.875rem;
+    height: 3px;
+  }
+  .event-key {
+    display: none;
+  }
+  @media (max-width: 639px) {
+    /* Pe ecrane înguste etichetele ar acoperi curba: trec într-o legendă sub axă */
+    .event-label {
+      display: none;
+    }
+    .event-key {
+      display: flex;
+    }
+    .chart {
+      margin-left: 2.25rem;
+    }
+  }
+  @keyframes draw {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+  @keyframes appear {
+    from {
+      opacity: 0;
+    }
+  }
+</style>

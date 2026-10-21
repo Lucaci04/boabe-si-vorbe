@@ -1,0 +1,52 @@
+---
+// Ilustrații liniare 1px, folosite până la sosirea fotografiilor reale 4:5 (public/images/*.webp).
+interface Props {
+  id: string;
+}
+
+const { id } = Astro.props;
+---
+
+<div class="relative aspect-[4/5] w-full border border-ink bg-kraft-dark" aria-hidden="true">
+  <svg
+    viewBox="0 0 160 200"
+    class="absolute inset-0 h-full w-full text-ink-soft"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    {id === 'flat-white' && (
+      <g>
+        <ellipse cx="80" cy="150" rx="52" ry="10" />
+        <path d="M44 96h72l-8 46a10 10 0 0 1-10 8H62a10 10 0 0 1-10-8z" />
+        <path d="M116 106c14 0 16 22 0 24" />
+        <ellipse cx="80" cy="96" rx="36" ry="6" />
+        <path d="M80 92c-8-4-10 4-2 4s6 4 2 4" />
+        <path d="M70 70c-4-8 4-12 0-20M88 72c-4-8 4-12 0-20" opacity=".6" />
+      </g>
+    )}
+    {id === 'v60-ethiopia' && (
+      <g>
+        <path d="M46 62h68l-26 46h-16z" />
+        <path d="M58 62l18 46M102 62l-18 46" opacity=".5" />
+        <ellipse cx="80" cy="62" rx="34" ry="5" />
+        <path d="M72 108h16v6H72z" />
+        <path d="M56 118h48v34a8 8 0 0 1-8 8H64a8 8 0 0 1-8-8z" />
+        <path d="M80 114v14" stroke-dasharray="2 4" />
+        <path d="M60 142h40" opacity=".5" />
+      </g>
+    )}
+    {id === 'cardamom-bun' && (
+      <g>
+        <ellipse cx="80" cy="140" rx="54" ry="12" />
+        <path d="M38 132c-6-30 18-52 42-52s48 22 42 52" />
+        <path d="M54 118c4-16 18-24 30-20s14 18 2 22-20-6-14-12" />
+        <path d="M64 96c10-6 30-4 38 10" opacity=".6" />
+        <circle cx="62" cy="104" r="1.5" /><circle cx="96" cy="100" r="1.5" /><circle cx="78" cy="90" r="1.5" />
+      </g>
+    )}
+  </svg>
+  <span class="absolute bottom-3 left-3 text-[10px] tracking-widest text-ink-soft uppercase">Foto în curând</span>
+</div>

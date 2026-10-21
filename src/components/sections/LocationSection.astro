@@ -1,0 +1,83 @@
+---
+import { cafe, contact, facilities, weekdayNames, type Weekday } from '../../data/cafe-config';
+
+// Săptămâna afișată de luni până duminică
+const week: Weekday[] = [1, 2, 3, 4, 5, 6, 0];
+const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contact.mapsQuery)}`;
+---
+
+<section id="locatie" class="border-b border-ink" aria-labelledby="locatie-title">
+  <div class="mx-auto max-w-[1440px]">
+    <div class="grid lg:grid-cols-12">
+      <div class="border-b border-ink px-4 pt-10 pb-8 md:px-6 md:pt-14 lg:col-span-5 lg:border-r lg:border-b-0">
+        <h2 id="locatie-title" class="text-[clamp(2.1rem,4vw,3.5rem)] leading-[1] font-bold tracking-[-0.03em]">
+          <address class="not-italic">{contact.street},<br />{contact.city}</address>
+        </h2>
+        <p class="mt-3 font-data text-lg text-ink-soft">(adresă demo) · zilnic, 07:30–20:00</p>
+        <dl class="mt-8 grid grid-cols-[5.5rem_1fr] gap-y-2 text-lg">
+          <dt class="field-label pt-1.5">Telefon</dt>
+          <dd><a class="link-ink" href={`tel:${contact.phone.replace(/\s/g, '')}`}>{contact.phone}</a></dd>
+          <dt class="field-label pt-1.5">E-mail</dt>
+          <dd><a class="link-ink" href={`mailto:${contact.email}`}>{contact.email}</a></dd>
+        </dl>
+        <a href={mapsUrl} class="btn btn-ink btn-arrow mt-8" target="_blank" rel="noopener noreferrer">
+          Deschide în hartă<span class="sr-only"> (se deschide într-o filă nouă)</span>
+        </a>
+      </div>
+
+      <div class="border-b border-ink lg:col-span-4 lg:border-r lg:border-b-0">
+        <table class="w-full font-data text-lg">
+          <caption class="sr-only">Programul săptămânal</caption>
+          <tbody>
+            {week.map((day) => {
+              const hours = cafe.hours[day];
+              return (
+                <tr class="border-b border-ink last:border-b-0" data-weekday={day}>
+                  <th scope="row" class="px-4 py-2.5 text-left font-medium md:px-6">{weekdayNames[day]}</th>
+                  <td class="px-4 py-2.5 text-right font-semibold tabular-nums md:px-6">{hours ? `${hours.open}–${hours.close}` : 'Închis'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <ul class="lg:col-span-3">
+        {facilities.map((f, i) => (
+          <li class:list={['flex gap-3 px-4 py-4 md:px-6', i > 0 && 'border-t border-ink']}>
+            <span class="facility-tick" aria-hidden="true"></span>
+            <span>
+              <span class="block font-data text-lg font-semibold tracking-[0.02em] uppercase">{f.label}</span>
+              <span class="block text-[0.9375rem] text-ink-soft">{f.detail}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { localTime } from '../../lib/schedule';
+
+  // Ziua curentă, inversată în cerneală (fusul orar al cafenelei).
+  const { weekday } = localTime(new Date());
+  const row = document.querySelector<HTMLElement>(`[data-weekday="${weekday}"]`);
+  if (row) {
+    row.classList.add('bg-ink', 'text-label');
+    row.querySelector('th')?.insertAdjacentHTML('beforeend', ' <span class="text-sm opacity-80">· azi</span>');
+  }
+</script>
+
+<style>
+  .facility-tick {
+    flex-shrink: 0;
+    margin-top: 0.3rem;
+    width: 1rem;
+    height: 1rem;
+    border: 1.5px solid var(--color-ink);
+    background:
+      linear-gradient(45deg, transparent 44%, var(--color-ink) 44% 56%, transparent 56%),
+      linear-gradient(-45deg, transparent 44%, var(--color-ink) 44% 56%, transparent 56%);
+  }
+</style>

@@ -1,0 +1,65 @@
+---
+import { cafe } from '../../data/cafe-config';
+
+// Statusul real se calculează în browser (fusul orar al cafenelei); HTML-ul static arată doar orarul.
+const fallback = cafe.hours[1];
+const range = fallback ? `${fallback.open}–${fallback.close}` : '';
+---
+
+<p class="live-status inline-flex items-center gap-2 font-data text-sm font-semibold tracking-[0.04em] whitespace-nowrap uppercase" data-live-status>
+  <span class="status-dot" data-state="unknown" aria-hidden="true"></span>
+  <span data-status-label>Orar</span>
+  <span class="hidden text-ink-soft lg:inline" data-status-range>{range}</span>
+</p>
+
+<script>
+  import { getOpenStatus } from '../../lib/schedule';
+
+  function render() {
+    const { isOpen, afterClose, today, label } = getOpenStatus();
+    const range = !today ? 'azi închis' : isOpen ? `până la ${today.close}` : afterClose ? 'redeschidem mâine' : `deschidem la ${today.open}`;
+    document.querySelectorAll<HTMLElement>('[data-live-status]').forEach((el) => {
+      el.querySelector('.status-dot')?.setAttribute('data-state', isOpen ? 'open' : 'closed');
+      const l = el.querySelector('[data-status-label]');
+      const r = el.querySelector('[data-status-range]');
+      if (l) l.textContent = label.replace(' acum', '');
+      if (r) r.textContent = `· ${range}`;
+      el.title = `${label} · ${range}`;
+    });
+  }
+
+  render();
+  setInterval(render, 60_000);
+</script>
+
+<style>
+  .status-dot {
+    position: relative;
+    width: 10px;
+    height: 10px;
+    border-radius: 9999px;
+    border: 1.5px solid var(--color-ink);
+    background: var(--color-kraft);
+    flex-shrink: 0;
+  }
+  .status-dot[data-state='open'] {
+    background: var(--color-ror);
+  }
+  .status-dot[data-state='closed'] {
+    background: var(--color-roast);
+  }
+  .status-dot[data-state='open']::after {
+    content: '';
+    position: absolute;
+    inset: -1.5px;
+    border-radius: inherit;
+    border: 1px solid var(--color-ror);
+    animation: pulse 2.6s var(--ease-out) infinite;
+  }
+  @keyframes pulse {
+    to {
+      transform: scale(2.4);
+      opacity: 0;
+    }
+  }
+</style>

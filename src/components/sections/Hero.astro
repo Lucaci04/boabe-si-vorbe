@@ -1,0 +1,164 @@
+---
+import { lot, developmentRatio } from '../../data/roast';
+import { photos } from '../../data/photos';
+import { guestOptions, timeSlots } from '../../lib/reservation';
+
+const { coffee } = lot;
+const fields = [
+  { label: 'Lot', value: `nr. ${lot.number}` },
+  { label: 'Origine', value: `${coffee.name}` },
+  { label: 'Procesare', value: 'Naturală' },
+  { label: 'Altitudine', value: coffee.altitude },
+  { label: 'Scor SCA', value: coffee.sca.replace(' puncte', '') },
+  { label: 'Dezvoltare', value: `${developmentRatio()}%` },
+];
+---
+
+<section id="top" class="border-b border-ink" aria-labelledby="hero-title">
+  <div class="mx-auto max-w-[1440px]">
+    <!-- Rândul de câmpuri al fișei -->
+    <dl class="grid grid-cols-2 gap-px border-b border-ink bg-ink sm:grid-cols-3 lg:grid-cols-6">
+      {fields.map((f) => (
+        <div class="cell bg-kraft">
+          <dt class="field-label">{f.label}</dt>
+          <dd class="field-value mt-1 truncate">{f.value}</dd>
+        </div>
+      ))}
+    </dl>
+
+    <div class="grid lg:grid-cols-12">
+      <div class="flex flex-col justify-between gap-8 px-4 pt-8 pb-8 md:px-6 lg:col-span-6 lg:gap-10 lg:pt-12 lg:pb-10">
+        <div>
+        <h1 id="hero-title" class="max-w-[13ch] text-[clamp(2.6rem,5.6vw,5.5rem)] leading-[0.95] font-bold tracking-[-0.025em]">
+          Cafea prăjită azi, la trei metri de ceașca ta.
+        </h1>
+        <p class="mt-5 max-w-[46ch] text-lg leading-[1.5] text-ink-soft md:text-xl">
+          O cafenea de cartier cu prăjitorie chiar în spatele barului. Lotul de azi e {coffee.name}, procesare naturală:
+          iasomie, bergamotă și caise uscate.
+        </p>
+        </div>
+
+        <!-- Rezervare rapidă pe hârtie de etichetă: completează pasul 2 al formularului de mai jos -->
+        <form class="label-stock grid grid-cols-2 gap-px bg-ink" data-quick-booking aria-label="Rezervare rapidă">
+          <label class="cell bg-label">
+            <span class="field-label">Persoane</span>
+            <select name="guests" class="quick-input">
+              {guestOptions.map((g, i) => <option value={g.id} selected={i === 1}>{g.id === '7+' ? 'Grup 7+' : `${g.label} ${g.count === 1 ? 'persoană' : 'persoane'}`}</option>)}
+            </select>
+          </label>
+          <label class="cell bg-label">
+            <span class="field-label">Ora</span>
+            <select name="time" class="quick-input">
+              {timeSlots.map((t) => <option value={t}>{t}</option>)}
+            </select>
+          </label>
+          <label class="cell col-span-2 bg-label sm:col-span-1">
+            <span class="field-label">Data</span>
+            <input type="date" name="date" class="quick-input" required />
+          </label>
+          <button type="submit" class="btn btn-ink btn-arrow col-span-2 min-h-16 border-0 px-8 text-lg sm:col-span-1">Caută masă</button>
+        </form>
+      </div>
+
+      <figure class="relative border-t border-ink lg:col-span-6 lg:border-t-0 lg:border-l">
+        <img
+          src={photos.roaster.src}
+          srcset={`/images/roaster-640.webp 640w, ${photos.roaster.src} 1100w`}
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          alt={photos.roaster.alt}
+          width={photos.roaster.width}
+          height={photos.roaster.height}
+          fetchpriority="high"
+          class="aspect-[4/3] h-full w-full object-cover lg:absolute lg:inset-0 lg:aspect-auto"
+        />
+        <span class="stamp" aria-hidden="true">Prăjit azi · {lot.roastedAt}</span>
+        <figcaption class="absolute inset-x-0 bottom-0 border-t border-ink bg-kraft px-4 py-2 font-data text-sm">
+          Fig. 1 — Lotul {lot.number} iese din prăjitor în tava de răcire.
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { addDaysISO, BOOKING_WINDOW_DAYS, isSlotUnavailable, todayISO } from '../../lib/reservation';
+
+  const form = document.querySelector<HTMLFormElement>('[data-quick-booking]')!;
+  const date = form.elements.namedItem('date') as HTMLInputElement;
+  const time = form.elements.namedItem('time') as HTMLSelectElement;
+  const today = todayISO();
+  date.min = today;
+  date.max = addDaysISO(today, BOOKING_WINDOW_DAYS);
+  date.value = today;
+
+  function refresh() {
+    let first: HTMLOptionElement | null = null;
+    [...time.options].forEach((o) => {
+      o.disabled = isSlotUnavailable(date.value, o.value);
+      if (!o.disabled && !first) first = o;
+    });
+    if (!first && date.value === today) {
+      date.value = addDaysISO(today, 1);
+      return refresh();
+    }
+    if (time.selectedOptions[0]?.disabled && first) (first as HTMLOptionElement).selected = true;
+  }
+  date.addEventListener('change', refresh);
+  refresh();
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const detail = {
+      guests: (form.elements.namedItem('guests') as HTMLSelectElement).value,
+      date: date.value,
+      time: time.value,
+    };
+    document.dispatchEvent(new CustomEvent('booking:prefill', { detail }));
+    document.querySelector('#rezervare')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  });
+</script>
+
+<style>
+  .quick-input {
+    display: block;
+    width: 100%;
+    margin-top: 0.375rem;
+    min-height: 2.25rem;
+    padding: 0.25rem 0;
+    border: 0;
+    border-bottom: 1px solid var(--color-ink);
+    background: transparent;
+    font-family: var(--font-data);
+    font-size: 1.25rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    border-radius: 0;
+    appearance: none;
+  }
+  select.quick-input {
+    background-image: linear-gradient(45deg, transparent 50%, var(--color-ink) 50%), linear-gradient(-45deg, transparent 50%, var(--color-ink) 50%);
+    background-position: calc(100% - 10px) 55%, calc(100% - 5px) 55%;
+    background-size: 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 1.5rem;
+  }
+  .quick-input:focus {
+    outline: none;
+    border-bottom: 2px solid var(--color-roast);
+  }
+  .stamp {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.25rem 0.75rem;
+    border: 2px solid var(--color-roast);
+    color: var(--color-roast);
+    background: color-mix(in oklab, var(--color-label) 88%, transparent);
+    font-family: var(--font-data);
+    font-weight: 600;
+    font-size: 1rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transform: rotate(-5deg);
+  }
+</style>

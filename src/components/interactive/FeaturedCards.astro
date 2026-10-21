@@ -1,0 +1,96 @@
+---
+import { featuredProducts, formatPrice } from '../../data/menu';
+import { photoFor } from '../../data/photos';
+import ProductArt from './ProductArt.astro';
+
+// Etichete de pungă lipite pe foaie, de mărimi diferite; cafeaua lotului e cea mare.
+const layout: Record<string, { size: 'lg' | 'sm'; tilt: number; focus?: string }> = {
+  'v60-ethiopia': { size: 'lg', tilt: -1.2 },
+  'flat-white': { size: 'sm', tilt: 1.6, focus: '28% 62%' },
+  'cardamom-bun': { size: 'sm', tilt: -0.9 },
+};
+const order = ['v60-ethiopia', 'flat-white', 'cardamom-bun'];
+const items = order.map((id) => featuredProducts.find((p) => p.id === id)!).filter(Boolean);
+---
+
+<ul class="collage px-4 py-8 md:px-6 lg:py-10">
+  {items.map((product, i) => {
+    const photo = photoFor(product.id);
+    const l = layout[product.id];
+    return (
+      <li class:list={['bag-label', `bag-${l.size}`, `bag-${i}`]} style={`--tilt:${l.tilt}deg`}>
+        <button type="button" class="label-stock group flex w-full cursor-pointer flex-col text-left" data-open-product={product.id} aria-haspopup="dialog">
+          {photo ? (
+            <span class:list={['block overflow-hidden border-b border-ink', l.size === 'lg' ? 'aspect-[4/5] lg:aspect-[4/3]' : 'aspect-square']}>
+              <img
+                src={photo.src}
+                alt={photo.alt}
+                width={photo.width}
+                height={photo.height}
+                loading="lazy"
+                decoding="async"
+                style={l.focus ? `object-position:${l.focus}` : undefined}
+                class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+              />
+            </span>
+          ) : (
+            <ProductArt id={product.id} />
+          )}
+          <span class:list={['flex flex-col', l.size === 'lg' ? 'px-5 pt-4 pb-5' : 'px-4 pt-3 pb-4']}>
+            <span class:list={['font-display leading-tight font-semibold tracking-[-0.02em]', l.size === 'lg' ? 'text-[1.875rem]' : 'text-xl']}>{product.name}</span>
+            <span class="mt-1 text-[0.9375rem] text-ink-soft">{product.featured!.caption}</span>
+            <span class="mt-4 flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
+              <span class:list={['font-data font-semibold whitespace-nowrap tabular-nums', l.size === 'lg' ? 'text-3xl' : 'text-2xl']}>{formatPrice(product.price)}</span>
+              <span class="font-data text-sm font-semibold tracking-[0.04em] whitespace-nowrap uppercase underline decoration-1 underline-offset-4 group-hover:decoration-roast group-hover:decoration-2">Fișa tehnică</span>
+            </span>
+          </span>
+        </button>
+      </li>
+    );
+  })}
+</ul>
+
+<style>
+  .collage {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  .bag-lg {
+    grid-column: 1 / -1;
+  }
+  .bag-label {
+    position: relative;
+    transform: rotate(var(--tilt));
+    transition: transform 0.4s var(--ease-out);
+  }
+  .bag-label:hover,
+  .bag-label:focus-within {
+    transform: rotate(0deg);
+    z-index: 3;
+  }
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .collage {
+      grid-template-columns: 1.4fr 1fr;
+      align-items: start;
+    }
+    .bag-lg {
+      grid-column: 1;
+      grid-row: span 2;
+    }
+  }
+  /* Pe desktop eticheta din dreapta trece peste regula dintre colaj și registru */
+  @media (min-width: 1024px) {
+    .collage {
+      gap: 1.25rem 1rem;
+      align-items: start;
+    }
+    .bag-1 {
+      margin-top: 0.75rem;
+    }
+    .bag-2 {
+      margin-right: -2.25rem;
+      z-index: 2;
+    }
+  }
+</style>

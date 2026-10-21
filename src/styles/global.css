@@ -1,0 +1,183 @@
+/* src/styles/global.css — „Fișa de prăjire”: site-ul ca foaia lotului de azi */
+/* Bricolage Grotesque (titluri) · Karla (text) · Barlow Condensed (etichete de câmp și date tabulare) */
+@import '@fontsource-variable/bricolage-grotesque/opsz.css';
+@import '@fontsource-variable/karla/index.css';
+@import '@fontsource/barlow-condensed/500.css';
+@import '@fontsource/barlow-condensed/600.css';
+@import 'tailwindcss';
+
+@theme {
+  --color-kraft: #d9b98d;      /* hârtia foii: fundalul paginii */
+  --color-kraft-dark: #c9a678; /* câmpuri adâncite, hover pe kraft */
+  --color-label: #f0e2c8;      /* hârtie de etichetă: etichete lipite, bon, fișa tehnică */
+  --color-ink: #1c1916;        /* cerneala formularului: text și linii */
+  --color-ink-soft: #3e3128;   /* text secundar pe kraft (6.7:1) */
+  --color-roast: #b8261b;      /* curba temperaturii boabelor, ștampila, închis */
+  --color-ror: #1d6b41;        /* curba ratei de creștere, deschis */
+
+  --font-display: 'Bricolage Grotesque Variable', 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-sans: 'Karla Variable', Karla, system-ui, sans-serif;
+  --font-data: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+
+  --max-width-reading: 65ch;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Foaia nu are umbre: adâncimea vine din linii și din hârtia de etichetă */
+  --shadow-*: initial;
+  --drop-shadow-*: initial;
+}
+
+:root {
+  --rule: 1px solid var(--color-ink);
+  --rule-soft: 1px solid color-mix(in oklab, var(--color-ink) 28%, transparent);
+  color-scheme: light;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5.5rem;
+    -webkit-text-size-adjust: 100%;
+    background: var(--color-kraft);
+    scrollbar-color: var(--color-ink) var(--color-kraft-dark);
+  }
+
+  body {
+    @apply bg-kraft font-sans text-[1.0625rem] leading-[1.6] text-ink antialiased;
+    caret-color: var(--color-roast);
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display font-semibold text-balance;
+    font-optical-sizing: auto;
+    letter-spacing: -0.025em;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  a {
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+
+  ::selection {
+    background: var(--color-ink);
+    color: var(--color-kraft);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-roast);
+    outline-offset: 2px;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+}
+
+@layer components {
+  /* Eticheta de câmp a formularului: „LOT”, „ORIGINE”. Nu se pune deasupra titlurilor. */
+  .field-label {
+    @apply block font-data text-[0.8125rem] leading-none font-semibold tracking-[0.06em] uppercase text-ink-soft;
+  }
+
+  /* Valoare de câmp: cifre tabulare */
+  .field-value {
+    @apply font-data text-xl leading-tight font-medium tabular-nums;
+  }
+
+  /* Celula formularului: liniile se lipesc între ele, ca pe o foaie tipărită */
+  .cell {
+    @apply border-ink px-4 py-3;
+  }
+
+  .btn {
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 border border-ink px-5 font-data text-base font-semibold tracking-[0.04em] uppercase transition-colors duration-200;
+  }
+  .btn-ink {
+    @apply bg-ink text-kraft hover:bg-roast hover:border-roast hover:text-label;
+  }
+  .btn-line {
+    @apply bg-transparent text-ink hover:bg-ink hover:text-kraft;
+  }
+
+  /* Hârtie de etichetă lipită pe kraft */
+  .label-stock {
+    @apply border border-ink bg-label text-ink;
+  }
+
+  /* Bifă de formular: înlocuiește pastilele și chip-urile */
+  .tick {
+    @apply relative inline-flex min-h-11 cursor-pointer items-center gap-2.5 border border-ink bg-label px-3.5 text-[0.9375rem] transition-colors;
+  }
+  .tick::before {
+    content: '';
+    width: 0.875rem;
+    height: 0.875rem;
+    flex-shrink: 0;
+    border: 1.5px solid var(--color-ink);
+    background: var(--color-label);
+  }
+  .tick:has(input:checked),
+  .tick[aria-pressed='true'] {
+    @apply bg-ink text-label;
+  }
+  .tick:has(input:checked)::before,
+  .tick[aria-pressed='true']::before {
+    border-color: var(--color-label);
+    background:
+      linear-gradient(45deg, transparent 44%, var(--color-label) 44% 56%, transparent 56%),
+      linear-gradient(-45deg, transparent 44%, var(--color-label) 44% 56%, transparent 56%),
+      var(--color-ink);
+  }
+  .tick:has(input:focus-visible) {
+    outline: 2px solid var(--color-roast);
+    outline-offset: 2px;
+  }
+  .tick:hover {
+    @apply bg-kraft-dark;
+  }
+  .tick:has(input:checked):hover,
+  .tick[aria-pressed='true']:hover {
+    @apply bg-ink;
+  }
+
+  /* Săgeată desenată (SVG ca mască), nu glif Unicode */
+  .btn-arrow::after,
+  .btn-arrow-back::before {
+    content: '';
+    width: 1.1em;
+    height: 1.1em;
+    flex-shrink: 0;
+    background: currentColor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='square'%3E%3Cpath d='M3 10h13M11 5l5 5-5 5'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  .btn-arrow-back::before {
+    transform: scaleX(-1);
+  }
+
+  .link-ink {
+    @apply underline decoration-1 underline-offset-[0.2em] hover:decoration-roast hover:decoration-2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

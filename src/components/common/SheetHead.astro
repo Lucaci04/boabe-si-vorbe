@@ -1,0 +1,23 @@
+---
+// Antetul unei secțiuni a foii: titlul în stânga, un câmp de date în dreapta (nu deasupra titlului).
+interface Props {
+  id: string;
+  title: string;
+  fieldLabel: string;
+  fieldValue: string;
+  tone?: 'kraft' | 'ink';
+}
+
+const { id, title, fieldLabel, fieldValue, tone = 'kraft' } = Astro.props;
+const rule = tone === 'ink' ? 'border-label/30' : 'border-ink';
+---
+
+<div class:list={['grid border-b md:grid-cols-[1fr_minmax(16rem,22rem)]', rule]}>
+  <h2 id={id} class="px-4 pt-10 pb-6 text-[clamp(2.1rem,4.4vw,3.75rem)] leading-[1] font-bold tracking-[-0.03em] md:px-6 md:pt-14 md:pb-8">
+    {title}
+  </h2>
+  <div class:list={['cell flex flex-col justify-end border-t md:border-t-0 md:border-l', rule]}>
+    <span class:list={['field-label', tone === 'ink' && 'text-label/75']}>{fieldLabel}</span>
+    <span class="field-value mt-1">{fieldValue}</span>
+  </div>
+</div>

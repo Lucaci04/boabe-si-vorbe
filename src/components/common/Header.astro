@@ -1,0 +1,51 @@
+---
+import { cafe, navLinks } from '../../data/cafe-config';
+import LiveStatus from './LiveStatus.astro';
+---
+
+<header class="sticky top-0 z-40 border-b border-ink bg-kraft">
+  <div class="mx-auto flex max-w-[1440px] items-stretch">
+    <a href="#top" class="flex flex-1 items-center border-r border-ink px-3 py-3 md:flex-none md:px-6">
+      <span class="font-display text-lg leading-none font-bold tracking-[-0.03em] min-[400px]:text-xl md:text-2xl">{cafe.name}</span>
+    </a>
+
+    <nav aria-label="Navigație principală" class="hidden flex-1 md:flex">
+      <ul class="flex">
+        {navLinks.map((link) => (
+          <li class="flex border-r border-ink">
+            <a class="nav-link flex items-center px-5 font-data text-base font-semibold tracking-[0.04em] uppercase" href={link.href}>
+              {link.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+    <div class="ml-auto flex items-center border-l border-ink px-3 md:px-5">
+      <LiveStatus />
+    </div>
+    <a href="#rezervare" class="btn btn-ink min-h-0 border-0 border-l border-ink px-4 sm:px-6"><span class="sm:hidden">Rezervă</span><span class="hidden sm:inline">Rezervă masă</span></a>
+  </div>
+
+  <nav aria-label="Navigație principală" class="border-t border-ink md:hidden">
+    <ul class="grid grid-cols-4">
+      {navLinks.map((link, i) => (
+        <li class:list={[i > 0 && 'border-l border-ink']}>
+          <a class="nav-link flex min-h-11 items-center justify-center px-1 font-data text-sm font-semibold tracking-[0.03em] uppercase" href={link.href}>
+            {link.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+</header>
+
+<style>
+  .nav-link {
+    transition: background-color 0.2s, color 0.2s;
+  }
+  .nav-link:hover {
+    background: var(--color-ink);
+    color: var(--color-kraft);
+  }
+</style>

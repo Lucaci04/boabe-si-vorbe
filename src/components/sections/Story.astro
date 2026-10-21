@@ -1,0 +1,73 @@
+---
+import { phases, ROAST_END, formatTime, lot } from '../../data/roast';
+import { photos } from '../../data/photos';
+---
+
+<section id="prajitoria" class="border-b border-ink" aria-labelledby="prajitoria-title">
+  <div class="mx-auto grid max-w-[1440px] lg:grid-cols-12">
+    <figure class="relative border-b border-ink lg:col-span-5 lg:border-r lg:border-b-0">
+      <img
+        src={photos.hero.src}
+        srcset={`/images/hero-coffee-800.webp 800w, ${photos.hero.src} 1600w`}
+        sizes="(min-width: 1024px) 42vw, 100vw"
+        alt={photos.hero.alt}
+        width={photos.hero.width}
+        height={photos.hero.height}
+        loading="lazy"
+        decoding="async"
+        class="aspect-[4/3] h-full w-full object-cover lg:aspect-auto"
+      />
+      <figcaption class="absolute inset-x-0 bottom-0 border-t border-ink bg-kraft px-4 py-2 font-data text-sm">
+        Fig. 2 — Același lot, la filtru, câteva zile mai târziu.
+      </figcaption>
+    </figure>
+
+    <div class="lg:col-span-7">
+      <div class="px-4 pt-10 pb-8 md:px-8 md:pt-14">
+        <h2 id="prajitoria-title" class="max-w-[14ch] text-[clamp(2.1rem,4.4vw,3.75rem)] leading-[1] font-bold tracking-[-0.03em]">
+          Prăjim în aceeași cameră în care bei.
+        </h2>
+        <div class="mt-6 space-y-4 text-lg leading-[1.6] md:text-xl">
+          <p class="max-w-[56ch]">
+            Am pus prăjitorul în spatele barului ca să nu existe distanță între boabe și ceașcă. Îl auzi dimineața, simți
+            mirosul de pâine prăjită la prima tură și poți întreba oricând ce s-a prăjit azi.
+          </p>
+          <p class="max-w-[56ch] text-ink-soft">
+            Cumpărăm de la ferme mici, prăjim de trei ori pe săptămână, în loturi de {lot.weightKg} kg, și scriem fiecare lot
+            pe o fișă ca cea de sus. Restul e vorbă: masa e a ta cât timp vrei.
+          </p>
+        </div>
+      </div>
+
+      <!-- Tabelul fazelor: antetul lui e și ritmul prăjirii -->
+      <table class="w-full border-t border-ink text-left">
+        <caption class="sr-only">Fazele unei prăjiri, lotul {lot.number}</caption>
+        <thead>
+          <tr class="bg-ink text-label">
+            <th scope="col" class="px-4 py-2 font-data text-sm font-semibold tracking-[0.06em] uppercase md:px-8">Timp</th>
+            <th scope="col" class="px-2 py-2 font-data text-sm font-semibold tracking-[0.06em] uppercase">Fază</th>
+            <th scope="col" class="hidden px-2 py-2 text-right font-data text-sm font-medium tracking-[0.04em] uppercase sm:table-cell md:pr-8">
+              Lot {lot.number} · {formatTime(ROAST_END)} total
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {phases.map((p, i) => (
+            <tr class:list={[i > 0 && 'border-t border-ink']}>
+              <td class="w-32 px-4 py-5 align-top whitespace-nowrap md:w-44 md:px-8">
+                <span class="field-value text-ink-soft">{formatTime(p.from)}–{formatTime(p.to)}</span>
+                <span class="mt-2 block h-1.5" style={`width:${Math.max(18, ((p.to - p.from) / ROAST_END) * 100)}%`}>
+                  <span class:list={['block h-full', i === 0 ? 'bg-ror' : i === 1 ? 'bg-ink' : 'bg-roast']}></span>
+                </span>
+              </td>
+              <td colspan="2" class="py-5 pr-4 align-top md:pr-8">
+                <span class="block font-display text-2xl leading-tight font-semibold">{p.name}</span>
+                <span class="mt-1 block max-w-[52ch] text-base text-ink-soft">{p.text}</span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

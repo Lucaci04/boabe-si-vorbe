@@ -1,0 +1,287 @@
+---
+import { coffees, formatPrice, milkOptions, products } from '../../data/menu';
+---
+
+<!-- Fișa tehnică (PLAN §3.3): modal centrat pe desktop, bottom sheet pe mobil. -->
+<dialog id="product-drawer" class="product-drawer" aria-labelledby="drawer-title">
+  <div class="drawer-handle-area" data-drag-handle>
+    <span class="drawer-handle" aria-hidden="true"></span>
+  </div>
+  <button type="button" class="drawer-close" data-close-drawer aria-label="Închide fișa tehnică">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+      <path d="M6 6l12 12M18 6L6 18"></path>
+    </svg>
+  </button>
+  <div class="drawer-body" data-drawer-body></div>
+</dialog>
+
+{products.map((product) => {
+  const coffee = product.coffee ? coffees[product.coffee] : undefined;
+  return (
+    <template id={`sheet-${product.id}`}>
+      <header class="border-b border-ink pb-6 pr-10">
+        <h2 id="drawer-title" class="text-3xl leading-[1.2] tracking-tight">{product.name}</h2>
+        <p class="mt-2 text-ink-soft">{product.description}</p>
+      </header>
+
+      {coffee && (
+        <section class="py-6">
+          <h3 class="field-label mb-3">Fișă tehnică · {coffee.name}</h3>
+          <dl class="tech-table">
+            <dt>Țară</dt><dd>{coffee.country}</dd>
+            <dt>Fermă / Cooperativă</dt><dd>{coffee.farm}</dd>
+            <dt>Altitudine</dt><dd>{coffee.altitude}</dd>
+            <dt>Varietate</dt><dd>{coffee.variety}</dd>
+            <dt>Procesare</dt><dd>{coffee.process}</dd>
+            <dt>Scor SCA</dt><dd>{coffee.sca}</dd>
+            <dt>Profil de prăjire</dt><dd>{coffee.roast}</dd>
+          </dl>
+          {product.notes && (
+            <p class="mt-4 text-sm text-ink-soft">
+              <span class="font-semibold text-ink">Note:</span> {product.notes.join(' · ')}
+            </p>
+          )}
+        </section>
+      )}
+
+      {product.ingredients && (
+        <section class="py-6">
+          <h3 class="field-label mb-3">Ingrediente</h3>
+          <p class="text-[15px]">{product.ingredients}</p>
+        </section>
+      )}
+
+      {product.milk && (
+        <fieldset class="border-t border-ink py-6" data-milk-options data-base-price={product.price}>
+          <legend class="field-label float-left mb-3 w-full">
+            Alege laptele
+          </legend>
+          <div class="clear-both grid gap-2">
+            {milkOptions.map((option, i) => (
+              <label class="milk-option">
+                <input type="radio" name="milk" value={option.id} data-surcharge={option.surcharge} checked={i === 0} />
+                <span class="flex-1">{option.label}</span>
+                <span class="text-sm text-ink-soft">+{option.surcharge} RON</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
+
+      <section class="border-t border-ink py-6">
+        <h3 class="field-label mb-3">Alergeni & valori nutriționale</h3>
+        <p class="text-[15px]">
+          {product.allergens.length > 0 ? `Conține: ${product.allergens.join(', ')}.` : 'Fără alergeni majori declarați.'}
+        </p>
+        <p class="mt-1 text-sm text-ink-soft">
+          Aproximativ {product.nutrition.kcal} kcal / porție ({product.nutrition.portion}).
+        </p>
+      </section>
+
+      <footer class="flex items-center justify-between border-t border-ink pt-6">
+        <span class="field-label">Preț</span>
+        <span class="font-data text-2xl font-semibold tabular-nums" data-drawer-price aria-live="polite">{formatPrice(product.price)}</span>
+      </footer>
+    </template>
+  );
+})}
+
+<script>
+  const dialog = document.querySelector<HTMLDialogElement>('#product-drawer')!;
+  const body = dialog.querySelector<HTMLElement>('[data-drawer-body]')!;
+  const handle = dialog.querySelector<HTMLElement>('[data-drag-handle]')!;
+  let opener: HTMLElement | null = null;
+
+  function open(id: string, trigger: HTMLElement) {
+    const tpl = document.querySelector<HTMLTemplateElement>(`#sheet-${CSS.escape(id)}`);
+    if (!tpl) return;
+    body.replaceChildren(tpl.content.cloneNode(true));
+    opener = trigger;
+    dialog.style.transform = '';
+    dialog.showModal();
+    document.documentElement.style.overflow = 'hidden';
+    body.scrollTop = 0;
+  }
+
+  function close() {
+    if (dialog.open) dialog.close();
+  }
+
+  dialog.addEventListener('close', () => {
+    document.documentElement.style.overflow = '';
+    opener?.focus();
+  });
+
+  document.addEventListener('click', (e) => {
+    const trigger = (e.target as HTMLElement).closest<HTMLElement>('[data-open-product]');
+    if (trigger) open(trigger.dataset.openProduct!, trigger);
+  });
+
+  dialog.querySelector('[data-close-drawer]')!.addEventListener('click', close);
+
+  // Click în afara ferestrei (pe backdrop) închide fișa.
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) close();
+  });
+
+  // Preț actualizat după tipul de lapte.
+  dialog.addEventListener('change', (e) => {
+    const input = e.target as HTMLInputElement;
+    if (input.name !== 'milk') return;
+    const fieldset = input.closest<HTMLElement>('[data-milk-options]')!;
+    const total = Number(fieldset.dataset.basePrice) + Number(input.dataset.surcharge);
+    const price = dialog.querySelector('[data-drawer-price]');
+    if (price) price.textContent = `${total} RON`;
+  });
+
+  // Swipe-down pe mâner închide bottom sheet-ul (butonul X rămâne alternativa fără gest).
+  let startY = 0;
+  let deltaY = 0;
+  handle.addEventListener('pointerdown', (e) => {
+    startY = e.clientY;
+    deltaY = 0;
+    handle.setPointerCapture(e.pointerId);
+    dialog.classList.add('is-dragging');
+  });
+  handle.addEventListener('pointermove', (e) => {
+    if (!handle.hasPointerCapture(e.pointerId)) return;
+    deltaY = Math.max(0, e.clientY - startY);
+    dialog.style.transform = `translateY(${deltaY}px)`;
+  });
+  const endDrag = (e: PointerEvent) => {
+    if (!handle.hasPointerCapture(e.pointerId)) return;
+    handle.releasePointerCapture(e.pointerId);
+    dialog.classList.remove('is-dragging');
+    dialog.style.transform = '';
+    if (deltaY > 100) close();
+  };
+  handle.addEventListener('pointerup', endDrag);
+  handle.addEventListener('pointercancel', endDrag);
+</script>
+
+<style>
+  .product-drawer {
+    margin: auto;
+    width: calc(100% - 3rem);
+    max-width: 32rem; /* max-w-lg */
+    max-height: calc(100dvh - 4rem);
+    padding: 0;
+    border: 1px solid var(--color-ink);
+    background: var(--color-label);
+    color: var(--color-ink);
+    overflow: hidden;
+  }
+  .product-drawer[open] {
+    display: flex;
+    flex-direction: column;
+    animation: fade-in 0.3s var(--ease-out);
+  }
+  .product-drawer::backdrop {
+    background: color-mix(in oklab, var(--color-ink) 45%, transparent);
+  }
+  .drawer-body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 2rem;
+  }
+  .drawer-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    cursor: pointer;
+    background: var(--color-label);
+    border: 1px solid transparent;
+  }
+  .drawer-close:hover {
+    border-color: var(--color-ink);
+  }
+
+  @media (max-width: 767px) {
+    .product-drawer {
+      margin: auto 0 0;
+      width: 100%;
+      max-width: none;
+      height: 75dvh;
+      max-height: 75dvh;
+      border-width: 1px 0 0;
+      transition: transform 0.3s var(--ease-out);
+    }
+    .product-drawer[open] {
+      animation: slide-up 0.35s var(--ease-out);
+    }
+    .product-drawer.is-dragging {
+      transition: none;
+    }
+    .drawer-body {
+      padding: 0.5rem 1.5rem 2rem;
+    }
+    .drawer-close {
+      top: 1.25rem;
+    }
+  }
+
+  .drawer-handle-area {
+    display: flex;
+    justify-content: center;
+    padding: 12px 0 16px;
+    cursor: grab;
+    touch-action: none;
+    flex-shrink: 0;
+  }
+  @media (min-width: 768px) {
+    .drawer-handle-area {
+      display: none; /* mânerul e doar pentru bottom sheet-ul de pe mobil */
+    }
+  }
+  .drawer-handle {
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--color-ink);
+  }
+
+  /* :global — conținutul vine clonat din <template>, fără atributul de scoping */
+  .drawer-body :global(.tech-table) {
+    display: grid;
+    grid-template-columns: minmax(8rem, 40%) 1fr;
+    border-top: 1px solid var(--color-ink);
+    font-size: 15px;
+  }
+  .drawer-body :global(.tech-table dt),
+  .drawer-body :global(.tech-table dd) {
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--color-ink);
+  }
+  .drawer-body :global(.tech-table dt) {
+    color: var(--color-ink-soft);
+    padding-right: 1rem;
+  }
+  .drawer-body :global(.milk-option) {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 44px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-ink);
+    cursor: pointer;
+  }
+  .drawer-body :global(.milk-option:has(input:checked)) {
+    border-color: var(--color-ink);
+    background: var(--color-kraft);
+  }
+  .drawer-body :global(.milk-option input) {
+    accent-color: var(--color-ink);
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+  }
+  @keyframes slide-up {
+    from { transform: translateY(100%); }
+  }
+</style>

@@ -1,0 +1,13 @@
+dist/
+.astro/
+node_modules/
+.env
+.env.*
+!.env.example
+.DS_Store
+.vercel/
+.vercel
+.env*
+*.log
+xcuserdata/
+.clerk/

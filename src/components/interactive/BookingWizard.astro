@@ -1,0 +1,651 @@
+---
+import { guestOptions, timeSlots, zones } from '../../lib/reservation';
+
+const steps = ['Zona', 'Dată & oaspeți', 'Contact'];
+
+// Iconițe liniare 1.5px (fără emoji, conform skill-ului UI/UX)
+const zoneIcons: Record<string, string> = {
+  interior:
+    '<path d="M4 18v-6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6M2 14h20M6 10V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3M5 18v2M19 18v2"/>',
+  terasa: '<path d="M5 19c8 0 14-6 14-14C11 5 5 11 5 19zM5 19l7-7"/>',
+  workspace: '<path d="M5 6h14v9H5zM3 18h18M10 9l-2 1.5L10 12M14 9l2 1.5-2 1.5"/>',
+};
+---
+
+<!-- Bonul de rezervare: talonul (titlu + răspunsuri) se rupe pe linia punctată de restul formularului -->
+<div class="slip label-stock grid lg:grid-cols-[minmax(17rem,24rem)_1fr]">
+<aside class="stub flex flex-col" aria-labelledby="rezervare-title">
+  <h2 id="rezervare-title" class="px-5 pt-8 pb-6 text-[clamp(2.1rem,4vw,3.25rem)] leading-[1] font-bold tracking-[-0.03em] md:px-6">Rezervă o masă.</h2>
+  <dl class="border-t border-ink" data-summary>
+    <div class="cell flex items-baseline justify-between gap-4 border-b"><dt class="field-label">Zona</dt><dd class="field-value text-right" data-sum="zone">—</dd></div>
+    <div class="cell flex items-baseline justify-between gap-4 border-b"><dt class="field-label">Oaspeți</dt><dd class="field-value text-right" data-sum="guests">—</dd></div>
+    <div class="cell flex items-baseline justify-between gap-4 border-b"><dt class="field-label">Data</dt><dd class="field-value text-right" data-sum="date">—</dd></div>
+    <div class="cell flex items-baseline justify-between gap-4 border-b"><dt class="field-label">Ora</dt><dd class="field-value text-right" data-sum="time">—</dd></div>
+  </dl>
+  <p class="px-5 py-5 text-[0.9375rem] text-ink-soft md:px-6">
+    O masă e a ta 90 de minute. Confirmarea vine pe loc, cu bilet pentru calendar. Pentru grupuri de 7+ persoane te
+    sunăm înainte.
+  </p>
+</aside>
+
+<div class="slip-main min-w-0">
+<form class="booking" novalidate data-booking>
+  <!-- Indicator pași -->
+  <ol class="grid grid-cols-3 border-b border-ink" aria-label="Pașii rezervării">
+    {steps.map((label, i) => (
+      <li class:list={['step-indicator px-4 py-3', i > 0 && 'border-l border-ink']} data-step-indicator={i + 1} aria-current={i === 0 ? 'step' : undefined}>
+        <span class="block font-data text-sm font-semibold tracking-[0.05em] uppercase">Pasul {i + 1}</span>
+        <span class="mt-0.5 block font-display text-lg leading-tight font-semibold">{label}</span>
+      </li>
+    ))}
+  </ol>
+
+  <div class="sr-only" aria-live="assertive" data-booking-alert></div>
+
+  <!-- Pasul 01: zona -->
+  <fieldset class="p-5 md:p-8" data-step="1">
+    <legend class="step-title" tabindex="-1">Unde vrei să stai?</legend>
+    <div class="grid gap-4 md:grid-cols-3">
+      {zones.map((zone, i) => (
+        <label class="zone-card">
+          <input type="radio" name="zone" value={zone.id} class="sr-only" checked={i === 0} />
+          <span class="flex items-center justify-between">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" set:html={zoneIcons[zone.id]} />
+            <span class="zone-tick" aria-hidden="true"></span>
+          </span>
+          <span class="mt-5 block font-display text-xl leading-tight font-semibold">{zone.label}</span>
+          <span class="zone-desc mt-1.5 block text-[0.9375rem]">{zone.description}</span>
+        </label>
+      ))}
+    </div>
+  </fieldset>
+
+  <!-- Pasul 02: oaspeți, dată, oră -->
+  <fieldset class="p-5 md:p-8" data-step="2" hidden>
+    <legend class="step-title" tabindex="-1">Când ne vedem?</legend>
+
+    <fieldset class="mb-8">
+      <legend class="field-label">Număr oaspeți</legend>
+      <div class="flex flex-wrap gap-2">
+        {guestOptions.map((option, i) => (
+          <label class="choice">
+            <input type="radio" name="guests" value={option.id} class="sr-only" checked={i === 1} />
+            <span>{option.label}</span>
+          </label>
+        ))}
+      </div>
+      <p class="mt-2 hidden text-sm" data-group-hint>Pentru grupuri de 7+ persoane te sunăm să confirmăm aranjarea meselor.</p>
+    </fieldset>
+
+    <div class="mb-8">
+      <label for="booking-date" class="field-label">Data</label>
+      <input id="booking-date" name="date" type="date" required class="input md:w-64" aria-describedby="err-date" />
+      <p id="err-date" class="field-error" data-error="date"></p>
+    </div>
+
+    <fieldset>
+      <legend class="field-label">Interval orar</legend>
+      <div class="grid grid-cols-3 gap-2 sm:grid-cols-5" data-slots>
+        {timeSlots.map((slot) => (
+          <label class="choice slot">
+            <input type="radio" name="time" value={slot} class="sr-only" />
+            <span>{slot}</span>
+          </label>
+        ))}
+      </div>
+      <p class="field-error" data-error="time" id="err-time"></p>
+    </fieldset>
+  </fieldset>
+
+  <!-- Pasul 03: contact -->
+  <fieldset class="p-5 md:p-8" data-step="3" hidden>
+    <legend class="step-title" tabindex="-1">Cum te găsim?</legend>
+    <div class="grid gap-6 md:grid-cols-2">
+      <div class="md:col-span-2">
+        <label for="booking-name" class="field-label">Nume & prenume</label>
+        <input id="booking-name" name="name" autocomplete="name" required maxlength="100" class="input" aria-describedby="err-name" />
+        <p id="err-name" class="field-error" data-error="name"></p>
+      </div>
+      <div>
+        <label for="booking-phone" class="field-label">Telefon mobil</label>
+        <input id="booking-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" required maxlength="25" class="input" aria-describedby="err-phone" />
+        <p id="err-phone" class="field-error" data-error="phone"></p>
+      </div>
+      <div>
+        <label for="booking-email" class="field-label">E-mail</label>
+        <input id="booking-email" name="email" type="email" autocomplete="email" required maxlength="120" class="input" aria-describedby="err-email" />
+        <p id="err-email" class="field-error" data-error="email"></p>
+      </div>
+      <div class="md:col-span-2">
+        <label for="booking-notes" class="field-label">Mențiuni speciale <span class="font-normal normal-case tracking-normal text-ink-soft">(opțional)</span></label>
+        <textarea id="booking-notes" name="notes" rows="3" maxlength="500" class="input resize-y" aria-describedby="err-notes" placeholder="Aniversare, scaun pentru copil, alergii…"></textarea>
+        <p id="err-notes" class="field-error" data-error="notes"></p>
+      </div>
+      <!-- Honeypot anti-spam -->
+      <div class="hidden" aria-hidden="true">
+        <label>Website <input name="website" tabindex="-1" autocomplete="off" /></label>
+      </div>
+    </div>
+    <p class="mt-6 text-xs text-ink-soft">
+      Folosim datele doar pentru a gestiona rezervarea și a te contacta despre ea.
+    </p>
+  </fieldset>
+
+  <p class="mx-6 mb-6 hidden border border-roast px-4 py-3 text-sm text-roast md:mx-8" role="alert" data-submit-error></p>
+
+  <div class="flex flex-col-reverse items-stretch justify-between gap-3 border-t border-ink p-4 sm:flex-row sm:items-center md:px-8">
+    <button type="button" class="btn btn-line btn-arrow-back w-full sm:w-auto" data-prev hidden>Înapoi</button>
+    <button type="button" class="btn btn-ink btn-arrow w-full sm:w-auto" data-next>Continuă la pasul 2</button>
+    <button type="submit" class="btn btn-ink w-full sm:w-auto" data-submit hidden>Confirmă rezervarea</button>
+  </div>
+</form>
+
+
+<!-- Biletul digital de confirmare -->
+<div class="ticket-wrap p-5 md:p-8" data-ticket hidden>
+  <div class="ticket label-stock mx-auto max-w-md" tabindex="-1" data-ticket-card>
+    <div class="p-8 text-center">
+      <p class="field-label">Bilet de rezervare</p>
+      <p class="mt-3 font-display text-5xl font-bold tracking-[-0.03em]" data-t="code"></p>
+      <p class="mt-2 font-data text-base font-semibold tracking-[0.04em] text-ror uppercase" data-t="status">Rezervare confirmată</p>
+    </div>
+    <div class="ticket-perforation" aria-hidden="true"></div>
+    <div class="grid grid-cols-[1fr_auto] items-center gap-6 p-8">
+      <dl class="space-y-3 text-[15px]">
+        <div><dt class="field-label">Zona</dt><dd data-t="zone"></dd></div>
+        <div><dt class="field-label">Oaspeți</dt><dd data-t="guests"></dd></div>
+        <div><dt class="field-label">Când</dt><dd data-t="when"></dd></div>
+        <div><dt class="field-label">Pe numele</dt><dd data-t="name"></dd></div>
+      </dl>
+      <div class="w-24" data-qr aria-hidden="true"></div>
+    </div>
+  </div>
+  <p class="mx-auto mt-4 hidden max-w-md text-center text-sm text-ink-soft" data-t="demo">
+    Mod demo: Supabase nu este configurat, rezervarea nu a fost salvată.
+  </p>
+  <div class="no-print mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+    <button type="button" class="btn btn-ink w-full sm:w-auto" data-ics>Adaugă în calendar (.ics)</button>
+    <button type="button" class="btn btn-line w-full sm:w-auto" data-print>Descarcă confirmarea</button>
+  </div>
+  <p class="no-print mt-6 text-center">
+    <button type="button" class="link-ink cursor-pointer text-sm" data-new-booking>Fă o altă rezervare</button>
+  </p>
+</div>
+</div>
+</div>
+
+<script>
+  import {
+    BOOKING_WINDOW_DAYS,
+    SLOT_DURATION_MINUTES,
+    addDaysISO,
+    formatDateRo,
+    guestsLabel,
+    isSlotUnavailable,
+    todayISO,
+    validateContact,
+    zoneLabel,
+    type FieldErrors,
+  } from '../../lib/reservation';
+
+  const form = document.querySelector<HTMLFormElement>('[data-booking]')!;
+  const ticket = document.querySelector<HTMLElement>('[data-ticket]')!;
+  const steps = [...form.querySelectorAll<HTMLFieldSetElement>('[data-step]')];
+  const indicators = [...form.querySelectorAll<HTMLElement>('[data-step-indicator]')];
+  const prevBtn = form.querySelector<HTMLButtonElement>('[data-prev]')!;
+  const nextBtn = form.querySelector<HTMLButtonElement>('[data-next]')!;
+  const submitBtn = form.querySelector<HTMLButtonElement>('[data-submit]')!;
+  const submitError = form.querySelector<HTMLElement>('[data-submit-error]')!;
+  const alertRegion = form.querySelector<HTMLElement>('[data-booking-alert]')!;
+  const dateInput = form.querySelector<HTMLInputElement>('#booking-date')!;
+  let current = 1;
+  let lastBooking: { code: string; date: string; time: string; zone: string; guests: string } | null = null;
+
+  // ── Dată: azi … +30 zile, în fusul orar al cafenelei ──
+  const today = todayISO();
+  dateInput.min = today;
+  dateInput.max = addDaysISO(today, BOOKING_WINDOW_DAYS);
+  dateInput.value = today;
+
+  function refreshSlots() {
+    const date = dateInput.value;
+    let firstFree: HTMLInputElement | null = null;
+    form.querySelectorAll<HTMLInputElement>('input[name="time"]').forEach((input) => {
+      const unavailable = !date || isSlotUnavailable(date, input.value);
+      input.disabled = unavailable;
+      input.closest('label')!.classList.toggle('is-unavailable', unavailable);
+      if (unavailable && input.checked) input.checked = false;
+      if (!unavailable && !firstFree) firstFree = input;
+    });
+    // Azi seara toate sloturile pot fi trecute: sărim automat la mâine.
+    if (!firstFree && date === today) {
+      dateInput.value = addDaysISO(today, 1);
+      refreshSlots();
+    }
+  }
+  dateInput.addEventListener('change', () => {
+    clearError('date');
+    refreshSlots();
+  });
+  refreshSlots();
+
+  form.addEventListener('change', (e) => {
+    const input = e.target as HTMLInputElement;
+    if (input.name === 'time') clearError('time');
+    if (input.name === 'guests') {
+      form.querySelector('[data-group-hint]')!.classList.toggle('hidden', input.value !== '7+');
+    }
+  });
+
+  // ── Erori pe câmp ──
+  function setError(field: string, message: string) {
+    const el = form.querySelector<HTMLElement>(`[data-error="${field}"]`);
+    if (el) el.textContent = message;
+    form.querySelector(`[name="${field}"]`)?.setAttribute('aria-invalid', 'true');
+  }
+  function clearError(field: string) {
+    const el = form.querySelector<HTMLElement>(`[data-error="${field}"]`);
+    if (el) el.textContent = '';
+    form.querySelectorAll(`[name="${field}"]`).forEach((f) => f.removeAttribute('aria-invalid'));
+  }
+  form.addEventListener('input', (e) => clearError((e.target as HTMLInputElement).name));
+
+  function showErrors(errors: FieldErrors) {
+    const fields = Object.keys(errors) as (keyof FieldErrors)[];
+    fields.forEach((f) => setError(f, errors[f]!));
+    alertRegion.textContent = `${fields.length} ${fields.length === 1 ? 'câmp necesită' : 'câmpuri necesită'} atenție.`;
+    const first = form.querySelector<HTMLElement>(`[name="${fields[0]}"]:not([disabled])`);
+    first?.focus();
+  }
+
+  const value = (name: string) => (form.elements.namedItem(name) as RadioNodeList | HTMLInputElement | null)?.value ?? '';
+
+  function validateStep(step: number): FieldErrors {
+    const errors: FieldErrors = {};
+    if (step === 2) {
+      if (!dateInput.value || dateInput.value < dateInput.min || dateInput.value > dateInput.max)
+        errors.date = `Alege o dată între azi și următoarele ${BOOKING_WINDOW_DAYS} de zile.`;
+      if (!value('time')) errors.time = 'Alege un interval orar disponibil.';
+    }
+    if (step === 3) {
+      Object.assign(errors, validateContact({ name: value('name'), phone: value('phone'), email: value('email'), notes: value('notes') }));
+    }
+    return errors;
+  }
+
+  // ── Rezumatul din stânga: răspunsurile rămân vizibile ──
+  const sum = (k: string, text: string) => {
+    const el = document.querySelector<HTMLElement>(`[data-sum="${k}"]`);
+    if (el) el.textContent = text || '—';
+  };
+  function updateSummary() {
+    sum('zone', value('zone') ? zoneLabel(value('zone')) : '');
+    sum('guests', value('guests') ? guestsLabel(value('guests')) : '');
+    sum('date', dateInput.value ? formatDateRo(dateInput.value) : '');
+    sum('time', value('time'));
+  }
+  form.addEventListener('change', updateSummary);
+  updateSummary();
+
+  // Formularul rapid din fișa de sus completează pasul 2.
+  document.addEventListener('booking:prefill', (e) => {
+    const { guests, date, time } = (e as CustomEvent<{ guests: string; date: string; time: string }>).detail;
+    ticket.hidden = true;
+    form.hidden = false;
+    const g = form.querySelector<HTMLInputElement>(`input[name="guests"][value="${CSS.escape(guests)}"]`);
+    if (g) g.checked = true;
+    form.querySelector('[data-group-hint]')!.classList.toggle('hidden', guests !== '7+');
+    if (date >= dateInput.min && date <= dateInput.max) dateInput.value = date;
+    refreshSlots();
+    const t = form.querySelector<HTMLInputElement>(`input[name="time"][value="${CSS.escape(time)}"]`);
+    if (t && !t.disabled) t.checked = true;
+    updateSummary();
+    goTo(1);
+  });
+
+  // ── Navigare între pași ──
+  function goTo(step: number) {
+    current = Math.min(Math.max(step, 1), steps.length);
+    step = current;
+    steps.forEach((s) => (s.hidden = Number(s.dataset.step) !== step));
+    indicators.forEach((ind) => {
+      const n = Number(ind.dataset.stepIndicator);
+      ind.toggleAttribute('data-done', n < step);
+      if (n === step) ind.setAttribute('aria-current', 'step');
+      else ind.removeAttribute('aria-current');
+    });
+    prevBtn.hidden = step === 1;
+    nextBtn.hidden = step === 3;
+    submitBtn.hidden = step !== 3;
+    nextBtn.textContent = `Continuă la pasul ${step + 1}`;
+    submitError.classList.add('hidden');
+    steps[step - 1].querySelector<HTMLElement>('.step-title')?.focus();
+  }
+
+  nextBtn.addEventListener('click', () => {
+    const errors = validateStep(current);
+    if (Object.keys(errors).length) return showErrors(errors);
+    goTo(current + 1);
+  });
+  prevBtn.addEventListener('click', () => goTo(current - 1));
+
+  // ── Trimitere ──
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errors = validateStep(3);
+    if (Object.keys(errors).length) return showErrors(errors);
+
+    const payload = Object.fromEntries(
+      ['zone', 'guests', 'date', 'time', 'name', 'phone', 'email', 'notes', 'website'].map((k) => [k, value(k)]),
+    );
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Se trimite…';
+    submitError.classList.add('hidden');
+
+    try {
+      const res = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (data.errors) {
+          const stepOf: Record<string, number> = { zone: 1, guests: 2, date: 2, time: 2 };
+          const firstStep = Math.min(...Object.keys(data.errors).map((k) => stepOf[k] ?? 3));
+          if (firstStep !== current) goTo(firstStep);
+          showErrors(data.errors);
+        }
+        throw new Error(data.error ?? 'Nu am putut trimite rezervarea. Încearcă din nou.');
+      }
+      showTicket({ ...payload, code: String(data.code) }, !!data.demo);
+    } catch (err) {
+      submitError.textContent = err instanceof Error && err.message !== 'Failed to fetch'
+        ? err.message
+        : 'Conexiunea a eșuat. Verifică internetul și încearcă din nou.';
+      submitError.classList.remove('hidden');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Confirmă rezervarea';
+    }
+  });
+
+  // ── Bilet digital ──
+  function showTicket(b: Record<string, string>, demo: boolean) {
+    lastBooking = { code: b.code, date: b.date, time: b.time, zone: b.zone, guests: b.guests };
+    const set = (key: string, text: string) => {
+      const el = ticket.querySelector<HTMLElement>(`[data-t="${key}"]`);
+      if (el) el.textContent = text;
+    };
+    set('code', `#${b.code}`);
+    set('zone', zoneLabel(b.zone));
+    set('guests', guestsLabel(b.guests));
+    set('when', `${formatDateRo(b.date)}, ${b.time}`);
+    set('name', b.name);
+    ticket.querySelector('[data-t="demo"]')!.classList.toggle('hidden', !demo);
+    ticket.querySelector('[data-qr]')!.innerHTML = qrSvg(b.code);
+    form.hidden = true;
+    ticket.hidden = false;
+    ticket.querySelector<HTMLElement>('[data-ticket-card]')!.focus();
+  }
+
+  // QR simulat vectorial (decorativ, PLAN §3.4): model determinist derivat din cod.
+  function qrSvg(code: string) {
+    const n = 21;
+    let seed = [...code].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+    const rand = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 2 ** 32);
+    const finder = (x: number, y: number) =>
+      [[0, 0], [n - 7, 0], [0, n - 7]].some(([fx, fy]) => x >= fx && x < fx + 7 && y >= fy && y < fy + 7);
+    const finderOn = (x: number, y: number) => {
+      const lx = x % (n - 7) < 7 ? x % (n - 7) : x;
+      const ly = y % (n - 7) < 7 ? y % (n - 7) : y;
+      const dx = Math.min(lx, 6 - lx), dy = Math.min(ly, 6 - ly);
+      return Math.min(dx, dy) !== 1;
+    };
+    let rects = '';
+    for (let y = 0; y < n; y++)
+      for (let x = 0; x < n; x++) {
+        const on = finder(x, y) ? finderOn(x, y) : rand() > 0.5;
+        if (on) rects += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
+      }
+    return `<svg viewBox="-1 -1 ${n + 2} ${n + 2}" fill="#1c1916" shape-rendering="crispEdges">${rects}</svg>`;
+  }
+
+  // .ics pentru calendar
+  ticket.querySelector('[data-ics]')!.addEventListener('click', () => {
+    if (!lastBooking) return;
+    const { code, date, time, zone, guests } = lastBooking;
+    const start = `${date.replaceAll('-', '')}T${time.replace(':', '')}00`;
+    const [h, m] = time.split(':').map(Number);
+    const endMin = h * 60 + m + SLOT_DURATION_MINUTES;
+    const end = `${date.replaceAll('-', '')}T${String(Math.floor(endMin / 60)).padStart(2, '0')}${String(endMin % 60).padStart(2, '0')}00`;
+    const stamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+    const ics = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Boabe & Vorbe//Rezervari//RO',
+      'BEGIN:VEVENT',
+      `UID:${code}@boabe-si-vorbe`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;TZID=Europe/Bucharest:${start}`,
+      `DTEND;TZID=Europe/Bucharest:${end}`,
+      `SUMMARY:Rezervare Boabe & Vorbe (${code})`,
+      `DESCRIPTION:${zoneLabel(zone)}\\, ${guestsLabel(guests)}`,
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].join('\r\n');
+    const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
+    const a = Object.assign(document.createElement('a'), { href: url, download: `rezervare-${code}.ics` });
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // „Descarcă confirmarea”: dialogul de printare permite salvarea ca PDF (stiluri @media print).
+  ticket.querySelector('[data-print]')!.addEventListener('click', () => window.print());
+
+  ticket.querySelector('[data-new-booking]')!.addEventListener('click', () => {
+    form.reset();
+    dateInput.value = today;
+    refreshSlots();
+    updateSummary();
+    ticket.hidden = true;
+    form.hidden = false;
+    goTo(1);
+  });
+</script>
+
+<style>
+  /* Linia de rupere dintre talon și formular */
+  .stub {
+    border-bottom: 1.5px dashed var(--color-ink);
+  }
+  @media (min-width: 1024px) {
+    .stub {
+      border-bottom: 0;
+      border-right: 1.5px dashed var(--color-ink);
+    }
+  }
+
+  .step-indicator {
+    color: var(--color-ink-soft);
+  }
+  .step-indicator[data-done] {
+    color: var(--color-ink);
+  }
+  .step-indicator[aria-current='step'] {
+    background: var(--color-kraft);
+    color: var(--color-ink);
+    background-image: linear-gradient(var(--color-roast), var(--color-roast));
+    background-size: 100% 3px;
+    background-position: bottom;
+    background-repeat: no-repeat;
+  }
+
+  /* legend stă în chenarul fieldset-ului; float îl readuce în fluxul normal, sub padding */
+  .step-title {
+    float: left;
+    display: block;
+    width: 100%;
+    margin-bottom: 1.25rem;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(1.5rem, 2.4vw, 2rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+  .step-title:focus {
+    outline: none;
+  }
+  .step-title + :global(*) {
+    clear: both;
+  }
+
+  .booking .field-label {
+    margin-bottom: 0.5rem;
+  }
+  .input {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--color-ink);
+    border-radius: 0;
+    background: var(--color-label);
+    font-size: 1rem;
+  }
+  .input:focus {
+    outline: 2px solid var(--color-roast);
+    outline-offset: -1px;
+  }
+  .input[aria-invalid='true'] {
+    border-color: var(--color-roast);
+    border-width: 2px;
+  }
+  .field-error {
+    margin-top: 0.375rem;
+    font-size: 0.875rem;
+    color: var(--color-roast);
+  }
+  .field-error:empty {
+    display: none;
+  }
+
+  /* Pasul 1: celule de zonă cu bifă; selectat = inversat în cerneală */
+  .zone-card {
+    display: block;
+    padding: 1.25rem;
+    border: 1px solid var(--color-ink);
+    background: var(--color-label);
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+  }
+  .zone-card:hover {
+    background: color-mix(in oklab, var(--color-kraft) 35%, var(--color-label));
+  }
+  .zone-desc {
+    color: var(--color-ink-soft);
+  }
+  .zone-tick {
+    width: 1rem;
+    height: 1rem;
+    border: 1.5px solid currentColor;
+  }
+  .zone-card:has(input:checked) {
+    background: var(--color-ink);
+    color: var(--color-label);
+  }
+  .zone-card:has(input:checked) .zone-desc {
+    color: color-mix(in oklab, var(--color-label) 80%, transparent);
+  }
+  .zone-card:has(input:checked) .zone-tick {
+    background:
+      linear-gradient(45deg, transparent 44%, var(--color-label) 44% 56%, transparent 56%),
+      linear-gradient(-45deg, transparent 44%, var(--color-label) 44% 56%, transparent 56%);
+  }
+  .zone-card:has(input:focus-visible),
+  .choice:has(input:focus-visible) {
+    outline: 2px solid var(--color-roast);
+    outline-offset: 2px;
+  }
+
+  /* Oaspeți și sloturi orare */
+  .choice > span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 3.25rem;
+    min-height: 44px;
+    width: 100%;
+    padding: 0 1rem;
+    border: 1px solid var(--color-ink);
+    background: var(--color-label);
+    font-family: var(--font-data);
+    font-size: 1.125rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+  }
+  .choice:hover > span {
+    background: color-mix(in oklab, var(--color-kraft) 35%, var(--color-label));
+  }
+  .choice:has(input:checked) > span {
+    background: var(--color-ink);
+    color: var(--color-label);
+  }
+  /* Ore trecute sau în afara programului: tăiate cu o linie diagonală */
+  .slot.is-unavailable > span {
+    cursor: not-allowed;
+    color: var(--color-ink-soft);
+    background:
+      linear-gradient(to top right, transparent calc(50% - 0.5px), var(--color-ink) calc(50% - 0.5px), var(--color-ink) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+      color-mix(in oklab, var(--color-kraft) 30%, var(--color-label));
+  }
+
+  /* Bilet: perforație simulată */
+  .ticket-perforation {
+    position: relative;
+    height: 0;
+    border-top: 1px dashed var(--color-ink);
+    margin: 0 1.25rem;
+  }
+  .ticket-perforation::before,
+  .ticket-perforation::after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--color-label);
+    border: 1px solid var(--color-ink);
+  }
+  .ticket-perforation::before {
+    left: -31px;
+    clip-path: inset(0 0 0 50%);
+  }
+  .ticket-perforation::after {
+    right: -31px;
+    clip-path: inset(0 50% 0 0);
+  }
+  .ticket:focus {
+    outline: none;
+  }
+
+  @media print {
+    :global(body *) {
+      visibility: hidden;
+    }
+    .ticket,
+    .ticket :global(*) {
+      visibility: visible;
+    }
+    .ticket {
+      position: absolute;
+      inset: 0 0 auto 0;
+    }
+    :global(header) {
+      position: static !important;
+    }
+  }
+</style>

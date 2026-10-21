@@ -1,0 +1,43 @@
+---
+import { cafe, navLinks } from '../../data/cafe-config';
+import { photos } from '../../data/photos';
+import { lot } from '../../data/roast';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="bg-ink text-label">
+  <div class="mx-auto grid max-w-[1440px] lg:grid-cols-12">
+    <div class="border-b border-label/30 px-4 pt-12 pb-8 md:px-6 lg:col-span-7 lg:border-r lg:border-b-0">
+      <p class="font-display text-[clamp(3rem,8vw,7rem)] leading-[0.9] font-bold tracking-[-0.04em]">{cafe.name}</p>
+      <p class="mt-4 max-w-[40ch] text-lg text-label/80">
+        Boabe prăjite în spatele barului, mese pentru vorbă lungă. Lotul {lot.number} se termină când se termină.
+      </p>
+    </div>
+    <div class="flex flex-col lg:col-span-5">
+      <nav aria-label="Navigație subsol" class="border-b border-label/30">
+        <ul class="grid grid-cols-2">
+          {navLinks.map((link, i) => (
+            <li class:list={[i % 2 === 1 && 'border-l border-label/30', i > 1 && 'border-t border-label/30']}>
+              <a class="flex min-h-14 items-center px-4 font-data text-lg font-semibold tracking-[0.04em] uppercase hover:bg-label hover:text-ink md:px-6" href={link.href}>
+                {link.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <div class="space-y-3 px-4 py-6 text-sm text-label/80 md:px-6">
+        <p>
+          Site demonstrativ: lotul, meniul, prețurile și adresa sunt fictive. Fotografii de pe
+          <a class="underline underline-offset-2 hover:text-label" href="https://unsplash.com" target="_blank" rel="noopener noreferrer">Unsplash</a>:
+          {Object.values(photos).map((photo, i, all) => (
+            <>
+              <a class="underline underline-offset-2 hover:text-label" href={photo.url} target="_blank" rel="noopener noreferrer">{photo.author}</a>{i < all.length - 1 ? ', ' : '.'}
+            </>
+          ))}
+        </p>
+        <p class="font-data tracking-[0.04em] uppercase">© {year} {cafe.name} · Alergenii sunt în fișa fiecărui produs</p>
+      </div>
+    </div>
+  </div>
+</footer>

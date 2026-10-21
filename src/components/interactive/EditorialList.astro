@@ -1,0 +1,61 @@
+---
+import { categories, columns, columnOf, formatPrice, products } from '../../data/menu';
+
+---
+
+<!-- Registrul: două coloane de formular, câte o bară de cerneală pe grupă -->
+<div class="grid md:grid-cols-2">
+  {columns.map(({ column }) => (
+    <div class:list={['border-ink', column === 2 && 'border-t md:border-t-0 md:border-l']} data-menu-column>
+      {categories
+        .filter((c) => c.column === column)
+        .map((category) => (
+          <div data-menu-group>
+            <h3 class="flex items-baseline justify-between bg-ink px-4 py-2 font-data text-base font-semibold tracking-[0.06em] text-label uppercase md:px-6">
+              <span>{category.label}</span>
+              <span class="text-sm font-medium text-label/80">Preț</span>
+            </h3>
+            <ul>
+              {products
+                .filter((p) => p.category === category.id && columnOf(p.category) === column)
+                .map((product) => {
+                  return (
+                    <li
+                      class="grid grid-cols-[1fr_auto] gap-x-4 border-b border-ink/30 px-4 py-4 md:px-6"
+                      data-menu-item
+                      data-category={product.category}
+                      data-vegan={product.tags.includes('VEGAN') ? '' : undefined}
+                      data-search={[product.name, product.description, ...(product.notes ?? []), ...product.tags].join(' ').toLowerCase()}
+                    >
+                      <div>
+                        <button
+                          type="button"
+                          class="cursor-pointer text-left font-display text-xl leading-snug font-semibold tracking-[-0.015em] decoration-roast decoration-2 underline-offset-4 hover:underline"
+                          data-open-product={product.id}
+                          aria-haspopup="dialog"
+                        >
+                          {product.name}
+                        </button>
+                        <p class="mt-0.5 text-[0.9375rem] text-ink-soft">{product.description}</p>
+                        {product.tags.length > 0 && (
+                          <ul class="mt-2 flex flex-wrap gap-1.5" aria-label="Etichete">
+                            {product.tags.map((tag) => (
+                              <li class="border border-ink px-1.5 py-px font-data text-xs font-semibold tracking-[0.05em] uppercase">{tag}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      <span class="pt-0.5 font-data text-xl font-semibold whitespace-nowrap tabular-nums">{formatPrice(product.price)}</span>
+                    </li>
+                  );
+                })}
+            </ul>
+          </div>
+        ))}
+    </div>
+  ))}
+</div>
+
+<p class="border-t border-ink px-4 py-16 text-center text-lg text-ink-soft md:px-6" hidden data-menu-empty>
+  Nimic în registru pentru căutarea asta. Încearcă „ovăz”, „etiopia” sau alege „Toate”.
+</p>

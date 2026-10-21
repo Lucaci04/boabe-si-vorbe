@@ -1,0 +1,101 @@
+---
+import { categories, products } from '../../data/menu';
+import FeaturedCards from '../interactive/FeaturedCards.astro';
+import EditorialList from '../interactive/EditorialList.astro';
+import ProductDrawer from '../interactive/ProductDrawer.astro';
+
+const filters = [{ id: 'all', label: 'Toate' }, ...categories, { id: 'vegan', label: 'Vegan' }];
+---
+
+<section id="meniu" class="border-b border-ink" aria-labelledby="meniu-title">
+  <div class="mx-auto max-w-[1440px]">
+    <!-- Antetul registrului: titlul și instrumentele lui pe același rând -->
+    <div class="grid border-b border-ink lg:grid-cols-12">
+      <div class="px-4 pt-10 pb-6 md:px-6 md:pt-14 lg:col-span-7 lg:pb-8">
+        <h2 id="meniu-title" class="text-[clamp(2.1rem,4.4vw,3.75rem)] leading-[1] font-bold tracking-[-0.03em]">Ce scoatem azi la bar.</h2>
+        <p class="mt-3 font-data text-lg text-ink-soft">{products.length} produse în registru · prețuri în RON · date demonstrative</p>
+      </div>
+      <div class="grid border-t border-ink lg:col-span-5 lg:border-t-0 lg:border-l" role="search">
+        <label class="cell block border-b border-ink">
+          <span class="field-label">Caută în registru</span>
+          <input
+            id="menu-search"
+            type="search"
+            placeholder="ovăz, etiopia, vegan…"
+            autocomplete="off"
+            class="mt-1.5 block min-h-9 w-full border-0 border-b border-ink bg-transparent py-1 font-data text-xl placeholder:text-ink-soft focus:border-b-2 focus:border-roast focus:outline-none"
+            data-menu-search
+          />
+        </label>
+        <div class="cell">
+          <span class="field-label" id="filter-label">Arată</span>
+          <div class="mt-2 flex flex-wrap gap-2" role="group" aria-labelledby="filter-label">
+            {filters.map((filter, i) => (
+              <button type="button" class="tick font-data text-base font-semibold tracking-[0.03em] uppercase" data-filter={filter.id} aria-pressed={i === 0 ? 'true' : 'false'}>
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="sr-only" aria-live="polite" data-menu-count></p>
+
+    <div class="grid lg:grid-cols-12">
+      <div class="border-b border-ink lg:col-span-4 lg:border-r lg:border-b-0" data-featured>
+        <FeaturedCards />
+      </div>
+      <div class="lg:col-span-8 lg:[&_[data-menu-column]:first-child_[data-menu-item]]:pl-11" data-ledger>
+        <EditorialList />
+      </div>
+    </div>
+  </div>
+  <ProductDrawer />
+</section>
+
+<script>
+  const search = document.querySelector<HTMLInputElement>('[data-menu-search]')!;
+  const chips = [...document.querySelectorAll<HTMLButtonElement>('[data-filter]')];
+  const items = [...document.querySelectorAll<HTMLElement>('[data-menu-item]')];
+  const groups = [...document.querySelectorAll<HTMLElement>('[data-menu-group]')];
+  const columns = [...document.querySelectorAll<HTMLElement>('[data-menu-column]')];
+  const empty = document.querySelector<HTMLElement>('[data-menu-empty]')!;
+  const count = document.querySelector<HTMLElement>('[data-menu-count]')!;
+  const featured = document.querySelector<HTMLElement>('[data-featured]')!;
+  const ledger = document.querySelector<HTMLElement>('[data-ledger]')!;
+  let active = 'all';
+
+  // Caută fără diacritice: „ovaz” găsește „ovăz”.
+  const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').trim();
+
+  function apply() {
+    const query = normalize(search.value);
+    let visible = 0;
+    for (const item of items) {
+      const matchesFilter =
+        active === 'all' || (active === 'vegan' ? item.hasAttribute('data-vegan') : item.dataset.category === active);
+      const matchesQuery = !query || normalize(item.dataset.search ?? '').includes(query);
+      const show = matchesFilter && matchesQuery;
+      item.hidden = !show;
+      if (show) visible++;
+    }
+    groups.forEach((g) => (g.hidden = !g.querySelector('[data-menu-item]:not([hidden])')));
+    columns.forEach((c) => (c.hidden = !c.querySelector('[data-menu-item]:not([hidden])')));
+    empty.hidden = visible > 0;
+    // Când filtrezi, registrul ia toată lățimea, iar colajul se retrage.
+    const filtering = active !== 'all' || !!query;
+    featured.hidden = filtering;
+    ledger.classList.toggle('lg:col-span-12', filtering);
+    count.textContent = `${visible} ${visible === 1 ? 'produs găsit' : 'produse găsite'}`;
+  }
+
+  search.addEventListener('input', apply);
+  chips.forEach((chip) =>
+    chip.addEventListener('click', () => {
+      active = chip.dataset.filter!;
+      chips.forEach((c) => c.setAttribute('aria-pressed', String(c === chip)));
+      apply();
+    }),
+  );
+</script>
